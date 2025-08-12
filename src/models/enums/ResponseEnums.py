@@ -1,0 +1,9 @@
+from enum import Enum
+
+class ResponseSignal(Enum): # Enum is making the file as config.yaml and in order to acces it's value you have to do `className.variable.value`
+
+    FILE_VALIDATED_SUCCESS = "file_validate_successfully"
+    FILE_TYPE_NOT_SUPPORTED = "file_type_not_supported"
+    FILE_SIZE_EXCEEDED = "file_size_exceeded"
+    FILE_UPLOAD_SUCCESS = "file_upload_success"
+    FILE_UPLOAD_FAILED = "file_upload_failed"
