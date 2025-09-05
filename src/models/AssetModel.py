@@ -33,7 +33,21 @@ class AssetModel(BaseDataModel): # responsible for the Project Collection
         return asset
     
     async def get_all_project_assets(self, asset_project_id: str, asset_type: str):
-        return await self.collection.find({
+        records =  await self.collection.find({
             "asset_project_id": ObjectId(asset_project_id) if isinstance(asset_project_id,str) else asset_project_id,
             "asset_type": asset_type
             }).to_list(length=None) # length=None means return all documents
+        
+        return [
+            Asset(**record)
+            for record in records
+        ]  # convert the record to a Asset Pydantic instance
+    
+    async def get_asset_record(self,asset_project_id: str, asset_name: str):
+        record = await self.collection.find_one({
+            "asset_project_id": ObjectId(asset_project_id) if isinstance(asset_project_id,str) else asset_project_id,
+            "asset_name": asset_name
+        })
+        if record:
+            return Asset(**record)
+        return None 

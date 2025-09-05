@@ -7,7 +7,8 @@ class DataChunk(BaseModel):
     chunk_text: str = Field(..., min_length=1)
     chunk_metadata: dict 
     chunk_order: int = Field(..., gt=0)
-    chunk_project_id: ObjectId # for making sure the chunk belongs to a project as a relation 
+    chunk_project_id: ObjectId # for making sure the chunk belongs to a project as a relation
+    chunk_asset_id: ObjectId 
 
 
     class Config:

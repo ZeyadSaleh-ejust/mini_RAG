@@ -10,3 +10,4 @@ class ResponseSignal(Enum): # Enum is making the file as config.yaml and in orde
     PROCESSING_FAILED = "processing_failed"
     PROCESSING_SUCCESS = "processing_success"
     NO_FILES_ERROR = "not_found_files"
+    FILE_ID_ERROR = "no_file_found_with_this_id"
