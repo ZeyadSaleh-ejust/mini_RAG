@@ -6,13 +6,31 @@ class ProjectModel(BaseDataModel): # responsible for the Project Collection
     def __init__(self, db_client: object):
         super().__init__(db_client)
         self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
+
+    @classmethod
+    async def create_instance(cls, db_client: object):
+        instance = cls(db_client)
+        await instance.init_collection()
+        return instance
+    
+    async def init_collection(self):
+         all_collections = await self.db_client.list_collection_names() # return all collections names
+         if DataBaseEnum.COLLECTION_PROJECT_NAME.value not in all_collections:
+              self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
+              indexes = Project.get_indexes()
+              for index in indexes:
+                   await self.collection.create_index(
+                        index["key"],
+                        name=index["name"],
+                        unique=index["unique"]
+                        )
     
     # for creating a Document
     async def create_project(self,project:Project):
         # insert_one is talking a dictionary 
         # NOTE: as the function is async and motor is async you need to use await
         result = await self.collection.insert_one(project.dict(by_alias=True,exclude_unset=True))
-        project._id =  result.inserted_id
+        project.id =  result.inserted_id
         return project
     
     async def get_project_or_create_one(self,project_id: str):
