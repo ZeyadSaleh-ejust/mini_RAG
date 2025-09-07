@@ -32,6 +32,9 @@ class OpenAIProvider(LLMInterface):
         self.embedding_model_id = model_id
         self.embedding_size = embedding_size
 
+    def process_text(self, text: str):
+        return text[:self.default_input_max_characters].strip()
+
     def generate_text(self, prompt: str,chat_history:list=[], max_output_tokens: int=None,
                       temperature: float=None):
         if not self.client:
@@ -85,6 +88,6 @@ class OpenAIProvider(LLMInterface):
         def construct_prompt(self,prompt: str, role: str):
             return {
                 "role": role,
-                "content": prompt
+                "content": self.process_text(prompt)
             }
         
