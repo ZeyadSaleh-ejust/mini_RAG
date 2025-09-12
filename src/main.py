@@ -17,7 +17,7 @@ async def startup_span():
     vectoddb_provider_factory = VectorDBProviderFactory(settings)
 
     # generation client
-    app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKED)
+    app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
     app.generation_client.set_generation_model(model_id=settings.GENERATION_MODEL_ID)
 
     # embedding client 
