@@ -19,7 +19,7 @@ class QdrantDBProvider(VectorDBInterface):
 
         self.logger = logging.getLogger(__name__)
 
-    def connet(self):
+    def connect(self):
         self.client = QdrantClient(path = self.db_path)
     
     def disconnect(self):

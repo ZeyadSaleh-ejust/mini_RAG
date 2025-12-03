@@ -14,7 +14,7 @@ async def startup_span():
     app.db_client = app.mongo_conn[settings.MONGODB_DATABASE]
 
     llm_provider_factory = LLMProviderFactory(settings)
-    vectoddb_provider_factory = VectorDBProviderFactory(settings)
+    vectordb_provider_factory = VectorDBProviderFactory(settings)
 
     # generation client
     app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
@@ -26,10 +26,10 @@ async def startup_span():
                                              embedding_size=settings.EMBEDDING_MODEL_SIZE)
     
     # vector db client 
-    app.vectordb_client = vectoddb_provider_factory.create(
+    app.vectordb_client = vectordb_provider_factory.create(
         provider = settings.VECTOR_DB_BACKEND
         )
-    app.vectordb_client.connet()
+    app.vectordb_client.connect()
     
 
 @app.on_event("shutdown")
