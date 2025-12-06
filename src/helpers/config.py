@@ -13,9 +13,9 @@ class Settings(BaseSettings):
     MONGODB_URL: str
     MONGODB_DATABASE: str
 
-    GENERATION_BACKED: str
+    GENERATION_BACKEND: str
     EMBEDDING_BACKEND: str
-
+    #COLAB_NGROK: str = None
     OPENAI_API_KEY: str = None
     OPENAI_API_URL: str = None
     COHERE_API_KEY: str = None
@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     GENERATION_MODEL_ID: str = None
     EMBEDDING_MODEL_ID: str = None
     EMBEDDING_MODEL_SIZE: int = None
+
     INPUT_DEFAULT_MAX_CHARACTERS: int = None
     GENERATION_DEFAULT_MAX_OUTPUT_TOKENS: int = None
     GENERATION_DEFAULT_TEMPERATURE: float = None

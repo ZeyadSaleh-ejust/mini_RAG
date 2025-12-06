@@ -4,11 +4,11 @@ from typing import List
 
 class VectorDBInterface(ABC):
     @abstractmethod
-    def connet(self):
+    def connect(self):
         pass
 
     @abstractmethod
-    def diconnect(self):
+    def disconnect(self):
         pass
 
     @abstractmethod
