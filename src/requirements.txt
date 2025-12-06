@@ -10,4 +10,4 @@ motor==3.6.0
 openai
 tokenizers==0.15.0
 cohere==5.5.8
-qdrant-client
+qdrant-client==1.10.1
