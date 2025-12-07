@@ -26,7 +26,9 @@ class NLPController(BaseController):
         collection_name = self.create_collection_name(project_id=project.project_id)
         collection_info = self.vectordb_client.get_collection_info(collection_name=collection_name)
 
-        return collection_info
+        return json.loads( # loads convert from string -> json
+            json.dumps(collection_info, default=lambda x: x.__dict__)   # dumps convert object->string of json
+        )
     
     def index_into_vector_db(self, project: Project, chunks: List[DataChunk],
                                    chunks_ids: List[int], 
@@ -130,3 +132,29 @@ class NLPController(BaseController):
         )
 
         return answer, full_prompt, chat_history
+
+    def search_vector_db_collection(self, project: Project, text: str, limit: int=10):
+        # step1: get collection name
+        collection_name = self.create_collection_name(project_id=project.project_id)
+
+        # step2: get text embedding vector
+        vector = self.embedding_client.embed_text(
+            text = text,
+            document_type = DocumentTypeEnum.QUERY.value
+        )
+
+        if not vector or len(vector) == 0:
+            return False
+        # step3: do sematic search
+        results = self.vectordb_client.search_by_vector(
+            collection_name = collection_name,
+            vector = vector,
+            limit=limit
+        )
+
+        if not results:
+            return False
+
+        return json.loads( # loads convert from string -> json
+            json.dumps(results, default=lambda x: x.__dict__)   # dumps convert object->string of json
+        )
