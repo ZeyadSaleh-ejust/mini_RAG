@@ -101,7 +101,7 @@ async def get_project_index_info(request: Request, project_id: str):
     )
 
     collection_info = nlp_controller.get_vector_db_collection_info(project = project)
-    print(collection_info)
+    #print(collection_info)
     return JSONResponse(
                 content={
                     "signal": ResponseSignal.VECTORDB_COLLECTION_RETRIEVED.value,
@@ -142,7 +142,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
     return JSONResponse(
                 content={
                     "signal": ResponseSignal.VECTORDB_SEARCH_SUCCESS.value,
-                    "results": results
+                    "results": [result.dict() for result in results]
                 }
             )
     
