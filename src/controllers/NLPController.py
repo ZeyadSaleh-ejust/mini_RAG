@@ -64,6 +64,29 @@ class NLPController(BaseController):
 
         return True
 
+    def search_vector_db_collection(self, project: Project, text: str, limit: int=10):
+        # step1: get collection name
+        collection_name = self.create_collection_name(project_id=project.project_id)
+
+        # step2: get text embedding vector
+        vector = self.embedding_client.embed_text(
+            text = text,
+            document_type = DocumentTypeEnum.QUERY.value
+        )
+
+        if not vector or len(vector) == 0:
+            return False
+        # step3: do sematic search
+        results = self.vectordb_client.search_by_vector(
+            collection_name = collection_name,
+            vector = vector,
+            limit=limit
+        )
+
+        if not results:
+            return False
+
+        return results
     
     def answer_rag_question(self, project: Project, query: str, limit: int = 10):
         
@@ -90,7 +113,9 @@ class NLPController(BaseController):
             for idx, doc in enumerate(retrieved_documents)
         ])
 
-        footer_prompt = self.template_parser.get("rag", "footer_prompt")
+        footer_prompt = self.template_parser.get("rag", "footer_prompt",{
+            "query": query
+            })
 
         # step3: Construct Generation Client Prompts
         chat_history = [
@@ -110,26 +135,3 @@ class NLPController(BaseController):
 
         return answer, full_prompt, chat_history
 
-    def search_vector_db_collection(self, project: Project, text: str, limit: int=10):
-        # step1: get collection name
-        collection_name = self.create_collection_name(project_id=project.project_id)
-
-        # step2: get text embedding vector
-        vector = self.embedding_client.embed_text(
-            text = text,
-            document_type = DocumentTypeEnum.QUERY.value
-        )
-
-        if not vector or len(vector) == 0:
-            return False
-        # step3: do sematic search
-        results = self.vectordb_client.search_by_vector(
-            collection_name = collection_name,
-            vector = vector,
-            limit=limit
-        )
-
-        if not results:
-            return False
-
-        return results
