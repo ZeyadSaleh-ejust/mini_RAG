@@ -7,7 +7,7 @@ import json
 class NLPController(BaseController):
 
     def __init__(self, vectordb_client, generation_client, 
-                 embedding_client, template_parser=None):
+                 embedding_client, template_parser):
         super().__init__()
 
         self.vectordb_client = vectordb_client
@@ -64,29 +64,6 @@ class NLPController(BaseController):
 
         return True
 
-    def search_vector_db_collection(self, project: Project, text: str, limit: int = 10):
-
-        # step1: get collection name
-        collection_name = self.create_collection_name(project_id=project.project_id)
-
-        # step2: get text embedding vector
-        vector = self.embedding_client.embed_text(text=text, 
-                                                 document_type=DocumentTypeEnum.QUERY.value)
-
-        if not vector or len(vector) == 0:
-            return False
-
-        # step3: do semantic search
-        results = self.vectordb_client.search_by_vector(
-            collection_name=collection_name,
-            vector=vector,
-            limit=limit
-        )
-
-        if not results:
-            return False
-
-        return results
     
     def answer_rag_question(self, project: Project, query: str, limit: int = 10):
         
@@ -155,6 +132,4 @@ class NLPController(BaseController):
         if not results:
             return False
 
-        return json.loads( # loads convert from string -> json
-            json.dumps(results, default=lambda x: x.__dict__)   # dumps convert object->string of json
-        )
+        return results
