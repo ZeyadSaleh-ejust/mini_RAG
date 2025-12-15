@@ -1,50 +1,40 @@
 from .BaseDataModel import BaseDataModel
 from .db_schemes import Project
 from .enums.DataBaseEnum import DataBaseEnum
+from sqlalchemy.future import select
 
 class ProjectModel(BaseDataModel): # responsible for the Project Collection
     def __init__(self, db_client: object):
         super().__init__(db_client)
-        self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
+        self.db_client = db_client
 
     @classmethod
     async def create_instance(cls, db_client: object):
         instance = cls(db_client)
-        await instance.init_collection()
         return instance
     
-    async def init_collection(self):
-         all_collections = await self.db_client.list_collection_names() # return all collections names
-         if DataBaseEnum.COLLECTION_PROJECT_NAME.value not in all_collections:
-              self.collection = self.db_client[DataBaseEnum.COLLECTION_PROJECT_NAME.value]
-              indexes = Project.get_indexes()
-              for index in indexes:
-                   await self.collection.create_index(
-                        index["key"],
-                        name=index["name"],
-                        unique=index["unique"]
-                        )
-    
+
     # for creating a Document
     async def create_project(self,project:Project):
-        # insert_one is talking a dictionary 
-        # NOTE: as the function is async and motor is async you need to use await
-        result = await self.collection.insert_one(project.dict(by_alias=True,exclude_unset=True))
-        project.id =  result.inserted_id
+        async with self.db_client() as session:
+            async with session.begin():
+                session.add(project)
+            await session.commit() # Executes the SQL INSERT statement
+            await session.refresh(project)
+            
         return project
     
-    async def get_project_or_create_one(self,project_id: str):
-        # find_one is returning a dictionary
-        record = await self.collection.find_one({
-            "project_id": project_id
-            })
-        if record is None:
-            # create new project
-            project = Project(project_id=project_id)
-            project = await self.create_project(project)
+    async def get_project_or_create_one(self,project_id: int):
+        async with self.db_client() as session:
+             async with session.begin():
+                  query = select(Project).where(Project.project_id == project_id)
+                  project = query.scalar_one_or_none()
+                  if project is None:
+                       project = self.create_project(project = Project(project_id=project_id))
+                       return project
+                  else:
+                       return project
 
-            return project
-        return Project(**record)  # convert the record to a Project Pydantic instance
     
     async def get_all_projects(self,page: int = 1, page_size: int = 10):
             # count total number of documents
