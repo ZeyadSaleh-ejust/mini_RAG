@@ -24,7 +24,7 @@ class DataChunk(SQLAlchemyBase):
     updated_at = Column(DateTime(timezone=True), onupdate = func.now(), nullable=True)
 
     project = relationship("Project", back_populates = "chunks") 
-    asset = relationship("Assets",back_populates = "chunks")
+    asset = relationship("Asset",back_populates = "chunks")
 
     __table_args__ = (
         Index('ix_chunk_project_id', chunk_project_id),
