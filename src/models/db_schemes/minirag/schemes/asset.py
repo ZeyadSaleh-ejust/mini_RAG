@@ -22,6 +22,7 @@ class Asset(SQLAlchemyBase):
     updated_at = Column(DateTime(timezone=True), onupdate = func.now(), nullable=True)
 
     project = relationship("Project", back_populates = "assets") # will have project record which matches the asset_projec_id relation
+    chunks = relationship("DataChunk", back_populates="asset")
 
     # for  every foreign key ther have to be indexing as -> faster retrieving from the database
     __table_args__ = (

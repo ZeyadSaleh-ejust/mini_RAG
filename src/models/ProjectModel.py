@@ -2,6 +2,7 @@ from .BaseDataModel import BaseDataModel
 from .db_schemes import Project
 from .enums.DataBaseEnum import DataBaseEnum
 from sqlalchemy.future import select
+from sqlalchemy import func
 
 class ProjectModel(BaseDataModel): # responsible for the Project Collection
     def __init__(self, db_client: object):
@@ -28,26 +29,25 @@ class ProjectModel(BaseDataModel): # responsible for the Project Collection
         async with self.db_client() as session:
              async with session.begin():
                   query = select(Project).where(Project.project_id == project_id)
-                  project = query.scalar_one_or_none()
+                  result = await session.execute(query)
+                  project = result.scalar_one_or_none()
                   if project is None:
-                       project = self.create_project(project = Project(project_id=project_id))
+                       project = await self.create_project(project = Project(project_id=project_id))
                        return project
                   else:
                        return project
 
     
     async def get_all_projects(self,page: int = 1, page_size: int = 10):
-            # count total number of documents
-            total_documents = await self.collection.count_documents({})
-            total_pages = total_documents//page_size
-            if total_documents % page_size>0:
-                total_pages += 1
-
-            # Cursors are lazy - they don't fetch data until you iterate through them
-            cursor = self.collection.find().skip((page - 1) * page_size).limit(page_size)
-            projects = []
-            async for document in cursor:
-                 projects.append(
-                      Project(**document)
-                 )
-            return projects, total_pages
+            async with self.db_client() as session:
+                 async with session.begin():
+                      total_documents = await session.execute(select(
+                           func.count(Project.project_id)
+                      ))
+                      total_documents = total_documents.scalar_one()
+                      total_pages = total_documents//page_size
+                      if total_documents % page_size>0:
+                            total_pages += 1
+                      query = select(Project).offset((page - 1) * page_size).limit(page_size)
+                      projects = await session.execute(query).scalars().all() # for any retrieving operation we use execute
+                      return projects, total_pages
