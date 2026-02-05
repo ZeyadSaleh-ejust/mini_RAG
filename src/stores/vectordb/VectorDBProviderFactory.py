@@ -17,13 +17,13 @@ class VectorDBProviderFactory:
             return QdrantDBProvider(
                 db_client = qdrant_db_client,
                 distance_method=self.config.VECTOR_DB_DISTANCE_METHOD,
-                default_vector_size=self.config.VECTOR_DB_DEFAULT_VECTOR_SIZE,
-                index_threshold=self.config.VECTOR_DB_INDEX_THRESHOLD
+                default_vector_size=self.config.EMBEDDING_MODEL_SIZE,
+                index_threshold=self.config.VECTOR_DB_PGVEC_INDEX_THRESHOLD
             )
         
         if provider == VectorDBEnums.PGVECTOR.value:
-            return PGVectorProvider(db_client = self.db_client,
+            return  PGVectorProvider(db_client = self.db_client,
                                     distance_method=self.config.VECTOR_DB_DISTANCE_METHOD,
-                                    default_vector_size=self.config.VECTOR_DB_DEFAULT_VECTOR_SIZE,
-                                    index_threshold=self.config.VECTOR_DB_INDEX_THRESHOLD)
+                                    default_vector_size=self.config.EMBEDDING_MODEL_SIZE,
+                                    index_threshold=self.config.VECTOR_DB_PGVEC_INDEX_THRESHOLD)
         return None

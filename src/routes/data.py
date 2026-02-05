@@ -103,7 +103,7 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
 
     process_controller = ProcessController(project_id=project_id)
 
-    nlp_controller = await NLPController(
+    nlp_controller =  NLPController(
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
@@ -160,7 +160,7 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
     )
     if do_reset==1:
         # delete associalted vectors collections
-        collection_name = nlp_controller.create_collection_name(project_id = project.project_id)
+        collection_name = await nlp_controller.create_collection_name(project_id = project.project_id)
         _ = await request.app.vectordb_client.delete_collection(
             collection_name=collection_name
         )

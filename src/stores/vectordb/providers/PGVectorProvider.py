@@ -23,7 +23,7 @@ class PGVectorProvider(VectorDBInterface):
 
 
     async def connect(self):
-        async with self.db_client as session:
+        async with self.db_client() as session:
             async with session.begin():
 
                 await session.execute(sql_text(
@@ -34,16 +34,16 @@ class PGVectorProvider(VectorDBInterface):
     async def disconnect(self):
         pass
 
-    async def is_collection_existed(self,collection_name: str) -> bool:
+    async def is_collection_existed(self, collection_name: str) -> bool:
+
         record = None
-        async with self.db_client as session:
+        async with self.db_client() as session:
             async with session.begin():
-
-                list_tbl = sql_text('SELECT * FROM pg_tables WHERE tablename = :collection_name')
+                list_tbl = sql_text(f'SELECT * FROM pg_tables WHERE tablename = :collection_name')
                 results = await session.execute(list_tbl, {"collection_name": collection_name})
-                record = results.scaler_one_or_none()
+                record = results.scalar_one_or_none()
 
-        return record 
+        return record
     
     async def list_all_collections(self) -> List:
         records = []
@@ -79,40 +79,42 @@ class PGVectorProvider(VectorDBInterface):
                 }
             
     async def delete_collection(self, collection_name: str):
-        async with self.db_client as session:
+        async with self.db_client() as session:
             async with session.begin():
                 self.logger.info(f"Deleting collection: {collection_name}")
-                delete_sql = sql_text('DROP TABLE IF EXISTS :collection_name')
-                await session.execute(delete_sql, {"collection_name": collection_name})
+                delete_sql = sql_text(f'DROP TABLE IF EXISTS {collection_name}')
+                await session.execute(delete_sql)
                 await session.commit()
             
         return True
     
     async def create_collection(self, collection_name: str,
-                                embedding_size: int,
-                                do_reset: bool = False):
+                                      embedding_size: int,
+                                      do_reset: bool = False):
+        
         if do_reset:
-            _ = await self.delete_collection(collection_name = collection_name)
+            _ = await self.delete_collection(collection_name=collection_name)
 
         is_collection_existed = await self.is_collection_existed(collection_name=collection_name)
         if not is_collection_existed:
             self.logger.info(f"Creating collection: {collection_name}")
-            async with self.db_client as session:
+            async with self.db_client() as session:
                 async with session.begin():
                     create_sql = sql_text(
-                            f'CREATE TABLE {collection_name} ('
-                                f'{PgVectorTableSchemaEnums.ID.value} bigserial PRIMARY KEY'
-                                f'{PgVectorTableSchemaEnums.TEXT.value} text, '
-                                f'{PgVectorTableSchemaEnums.VECTOR.value} vector({embedding_size}), '
-                                f'{PgVectorTableSchemaEnums.METADATA.value} jsonb DEFAULT \'{{}}\', '
-                                f'{PgVectorTableSchemaEnums.CHUNK_ID.value} integer, '
-                                f'FOREIGN KEY ({PgVectorTableSchemaEnums.CHUNK_ID.value}) REFERENCES chunks(chunk_id)'
-                            ')'
-                        )   
+                        f'CREATE TABLE {collection_name} ('
+                            f'{PgVectorTableSchemaEnums.ID.value} bigserial PRIMARY KEY,'
+                            f'{PgVectorTableSchemaEnums.TEXT.value} text, '
+                            f'{PgVectorTableSchemaEnums.VECTOR.value} vector({embedding_size}), '
+                            f'{PgVectorTableSchemaEnums.METADATA.value} jsonb DEFAULT \'{{}}\', '
+                            f'{PgVectorTableSchemaEnums.CHUNK_ID.value} integer, '
+                            f'FOREIGN KEY ({PgVectorTableSchemaEnums.CHUNK_ID.value}) REFERENCES chunks(chunk_id)'
+                        ')'
+                    )
                     await session.execute(create_sql)
                     await session.commit()
+            
             return True
-        
+
         return False
     
     async def is_index_existed(self, collection_name: str) -> bool:
@@ -190,10 +192,12 @@ class PGVectorProvider(VectorDBInterface):
                                       f'({PgVectorTableSchemaEnums.TEXT.value}, {PgVectorTableSchemaEnums.VECTOR.value}, {PgVectorTableSchemaEnums.METADATA.value}, {PgVectorTableSchemaEnums.CHUNK_ID.value}) '
                                       f'VALUES (:text, :vector, :metadata, :chunk_id)'
                                      )
+                metadata_json = json.dumps(metadata, ensure_ascii=False) if metadata is not None else "{}"
+                        
                 await session.execute(insert_sql, {
                     'text': text,
                     'vector': "[" + ",".join([str(v) for v in vector]) + "]",
-                    'metadata': metadata,
+                    'metadata': metadata_json,
                     'chunk_id': record_id
                 })
                 await session.commit()
@@ -201,49 +205,54 @@ class PGVectorProvider(VectorDBInterface):
         return True
     
     async def insert_many(self, collection_name: str, texts: list,
-                     vectors: list, metadata: list = None,
-                    record_ids: list = None, batch_size: int = 50):
+                         vectors: list, metadata: list = None,
+                         record_ids: list = None, batch_size: int = 50):
+        
         is_collection_existed = await self.is_collection_existed(collection_name=collection_name)
         if not is_collection_existed:
-            self.logger.error(f"Can't insert new records to non-existed collection: {collection_name}")
+            self.logger.error(f"Can not insert new records to non-existed collection: {collection_name}")
             return False
         
         if len(vectors) != len(record_ids):
-            self.logger.error(f"Invalid date items for collection: {collection_name}")
+            self.logger.error(f"Invalid data items for collection: {collection_name}")
             return False
+        
         if not metadata or len(metadata) == 0:
             metadata = [None] * len(texts)
-        async with self.db_client as session:
+        
+        async with self.db_client() as session:
             async with session.begin():
-                
-                for i in range(0, len(vectors), batch_size):
-                    batch_texts = texts[i:i + batch_size]
+                for i in range(0, len(texts), batch_size):
+                    batch_texts = texts[i:i+batch_size]
                     batch_vectors = vectors[i:i + batch_size]
                     batch_metadata = metadata[i:i + batch_size]
                     batch_record_ids = record_ids[i:i + batch_size]
 
                     values = []
 
-                    for _text, _vector, _meatadata, _record_id in zip(batch_texts, batch_vectors, batch_metadata, batch_record_ids):
+                    for _text, _vector, _metadata, _record_id in zip(batch_texts, batch_vectors, batch_metadata, batch_record_ids):
+                        
+                        metadata_json = json.dumps(_metadata, ensure_ascii=False) if _metadata is not None else "{}"
                         values.append({
                             'text': _text,
-                            'vector': "[" + ",".join([str(v) for v in _vector]) + "]",
-                            'metadata': _meatadata,
+                            'vector': "[" + ",".join([ str(v) for v in _vector ]) + "]",
+                            'metadata': metadata_json,
                             'chunk_id': _record_id
                         })
-
+                    
                     batch_insert_sql = sql_text(f'INSERT INTO {collection_name} '
-                                      f'({PgVectorTableSchemaEnums.TEXT.value},'
-                                       f'{PgVectorTableSchemaEnums.VECTOR.value},'
-                                       f'{PgVectorTableSchemaEnums.METADATA.value},'
-                                       f'{PgVectorTableSchemaEnums.CHUNK_ID.value}) '
-                                      f'VALUES (:text, :vector, :metadata, :chunk_id)'
-                                     )
+                                    f'({PgVectorTableSchemaEnums.TEXT.value}, '
+                                    f'{PgVectorTableSchemaEnums.VECTOR.value}, '
+                                    f'{PgVectorTableSchemaEnums.METADATA.value}, '
+                                    f'{PgVectorTableSchemaEnums.CHUNK_ID.value}) '
+                                    f'VALUES (:text, :vector, :metadata, :chunk_id)')
+                    
                     await session.execute(batch_insert_sql, values)
-                    await session.commit()
 
-            return True
-        
+        await self.create_vector_index(collection_name=collection_name)
+
+        return True
+    
     async def search_by_vector(self, collection_name: str, vector: list, limit: int) -> List[RetrievedDocument]:
         is_collection_existed = await self.is_collection_existed(collection_name=collection_name)
         if not is_collection_existed:
