@@ -81,7 +81,6 @@ async def index_project(request: Request, project_id: int,push_request: PushRequ
         is_inserted = await nlp_controller.index_into_vector_db(
             project = project,
             chunks = page_chunks,
-            do_reset=push_request.do_reset,
             chunks_ids=chunk_ids
         )
 
