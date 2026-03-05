@@ -13,11 +13,14 @@ class PGVectorProvider(VectorDBInterface):
         
         self.db_client = db_client
         self.default_vector_size = default_vector_size
-        self.distance_method = distance_method
+        
         self.index_threshold = index_threshold
 
-        self.pgvector_table_prefix = PgVectorTableSchemaEnums._PREFIX.value
+        if distance_method == DistanceMethodEnums.COSINE.value:
+            self.distance_method = PgVectorDistanceMethodEnums.COSINE.value
 
+        self.pgvector_table_prefix = PgVectorTableSchemaEnums._PREFIX.value
+        self.distance_method = distance_method
         self.logger = logging.getLogger("uvicorn")
         self.default_index_name = lambda collection_name: f"{collection_name}_vector_idx"
 
@@ -203,6 +206,8 @@ class PGVectorProvider(VectorDBInterface):
                 })
                 await session.commit()
 
+                await self.create_vector_index(collection_name = collection_name)
+
         return True
     
     async def insert_many(self, collection_name: str, texts: list,
@@ -249,6 +254,8 @@ class PGVectorProvider(VectorDBInterface):
                                     f'VALUES (:text, :vector, :metadata, :chunk_id)')
                     
                     await session.execute(batch_insert_sql, values)
+
+                    await self.create_vector_index(collection_name = collection_name)
 
         await self.create_vector_index(collection_name=collection_name)
 

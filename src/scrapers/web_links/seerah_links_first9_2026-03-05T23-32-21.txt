@@ -1,0 +1,36 @@
+1. URL: https://islamweb.net/ar/fatawa/588/%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9-%D8%A7%D9%84%D9%86%D8%A8%D9%88%D9%8A%D8%A9
+   Title: السيرة النبوية
+   Type: Other
+
+2. URL: https://islamweb.net/ar/fatawa/592/%D8%A3%D9%87%D8%AF%D8%A7%D9%81-%D8%AF%D8%B1%D8%A7%D8%B3%D8%A9-%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9
+   Title: أهداف دراسة السيرة
+   Type: Other
+
+3. URL: https://islamweb.net/ar/fatawa/594/%D9%85%D9%86%D9%87%D8%AC-%D9%83%D8%AA%D8%A7%D8%A8%D8%A9-%D8%A7%D9%84%D8%AA%D8%A7%D8%B1%D9%8A%D8%AE-%D9%88%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9
+   Title: منهج كتابة التاريخ والسيرة
+   Type: Other
+
+4. URL: https://islamweb.net/ar/fatawa/596/%D9%85%D8%B5%D8%A7%D8%AF%D8%B1-%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9-%D8%A7%D9%84%D9%86%D8%A8%D9%88%D9%8A%D8%A9
+   Title: مصادر السيرة النبوية
+   Type: Other
+
+5. URL: https://islamweb.net/ar/fatawa/848/%D8%B4%D8%A8%D9%87%D8%A7%D8%AA-%D8%AD%D9%88%D9%84-%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9-%D8%A7%D9%84%D9%86%D8%A8%D9%88%D9%8A%D8%A9
+   Title: شبهات حول السيرة النبوية
+   Type: Other
+
+6. URL: https://islamweb.net/ar/fatawa/590/%D9%85%D9%82%D8%AF%D9%85%D8%A7%D8%AA-%D9%81%D9%8A-%D8%A7%D9%84%D8%B3%D9%8A%D8%B1%D8%A9?treeview=2
+   Title: مقدمات في السيرة
+   Type: Other
+
+7. URL: https://islamweb.net/ar/fatawa/632/%D9%85%D9%86-%D8%A7%D9%84%D8%A8%D8%B9%D8%AB%D8%A9-%D8%A5%D9%84%D9%89-%D8%A7%D9%84%D9%87%D8%AC%D8%B1%D8%A9?treeview=2
+   Title: من البعثة إلى الهجرة
+   Type: Other
+
+8. URL: https://islamweb.net/ar/fatawa/686/%D9%85%D9%86-%D8%A7%D9%84%D9%87%D8%AC%D8%B1%D8%A9-%D8%A5%D9%84%D9%89-%D8%A8%D8%AF%D8%B1?treeview=2
+   Title: من الهجرة إلى بدر
+   Type: Other
+
+9. URL: https://islamweb.net/ar/fatawa/718/%D9%85%D9%86-%D8%A8%D8%AF%D8%B1-%D8%A5%D9%84%D9%89-%D8%A7%D9%84%D8%AD%D8%AF%D9%8A%D8%A8%D9%8A%D8%A9?treeview=2
+   Title: من بدر إلى الحديبية
+   Type: Other
+
