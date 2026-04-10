@@ -11,7 +11,7 @@ app = FastAPI()
 
 @app.on_event("startup")
 async def startup_span():
-    settings = get_settings()
+    settings = get_settings() # getting access for all .env variables
     postgres_conn = f"postgresql+asyncpg://{settings.POSTGRES_USERNAME}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_MAIN_DATABASE}"
     app.db_engine = create_async_engine(url = postgres_conn)
     app.db_client = sessionmaker(

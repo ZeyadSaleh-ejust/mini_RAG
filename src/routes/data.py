@@ -83,7 +83,7 @@ async def upload_data(request: Request, project_id: int,file: UploadFile,
         }
     )
 
-
+# process the uploaded files into chunks and store the chunks in vector db 
 @data_router.post("/process/{project_id}")
 async def process_endpoint(request: Request, project_id: int, process_request: ProcessRequest):
     #file_id = process_request.file_id
@@ -160,7 +160,7 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
     )
     if do_reset==1:
         # delete associalted vectors collections
-        collection_name = await nlp_controller.create_collection_name(project_id = project.project_id)
+        collection_name =  nlp_controller.create_collection_name(project_id = project.project_id)
         _ = await request.app.vectordb_client.delete_collection(
             collection_name=collection_name
         )

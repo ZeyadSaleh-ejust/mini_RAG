@@ -21,7 +21,7 @@ class PGVectorProvider(VectorDBInterface):
 
         self.pgvector_table_prefix = PgVectorTableSchemaEnums._PREFIX.value
         self.distance_method = distance_method
-        self.logger = logging.getLogger("uvicorn")
+        self.logger = logging.getLogger("uvicorn") # for connecting with FastAPI logger logs
         self.default_index_name = lambda collection_name: f"{collection_name}_vector_idx"
 
 
@@ -50,7 +50,7 @@ class PGVectorProvider(VectorDBInterface):
     
     async def list_all_collections(self) -> List:
         records = []
-        async with self.db_client as session:
+        async with self.db_client() as session:
             async with session.begin():
 
                 list_tbl = sql_text('SELECT tablename FROM pg_tables WHERE tablename LIKE :prefix')
@@ -60,25 +60,31 @@ class PGVectorProvider(VectorDBInterface):
         return records
     
     async def get_collection_info(self, collection_name: str) -> dict:
-        async with self.db_client as session:
+        async with self.db_client() as session:
             async with session.begin():
 
-                table_info_stmt = sql_text('''
+                table_info_sql = sql_text('''
                     SELECT schemaname, tablename, tableowner, tablespace, hasindexes
                     FROM pg_tables
                     WHERE tablename = :collection_name
                 ''')
-                count_sql = sql_text('SELECT COUNT(*) FROM :collection_name')
-                table_info = await session.execute(table_info_stmt, {"collection_name": collection_name})
-                record_count = await session.execute(count_sql, {"collection_name": collection_name})
+                count_sql = sql_text(f'SELECT COUNT(*) FROM {collection_name}')
+                table_info = await session.execute(table_info_sql, {"collection_name": collection_name})
+                record_count = await session.execute(count_sql)
 
                 table_data = table_info.fetchone()
                 if not table_data:
                     return None
                 
                 return {
-                    "table_data": dict(table_data),
-                    "record_count": record_count,
+                    "table_data":{
+                        "schemaname": table_data[0],
+                        "tablename": table_data[1],
+                        "tableowner": table_data[2],
+                        "tablespace": table_data[3],
+                        "hasindexes": table_data[4],
+                    },
+                    "record_count": record_count.scalar_one(),
                 }
             
     async def delete_collection(self, collection_name: str):
@@ -261,19 +267,21 @@ class PGVectorProvider(VectorDBInterface):
 
         return True
     
-    async def search_by_vector(self, collection_name: str, vector: list, limit: int) -> List[RetrievedDocument]:
+    async def search_by_vector(self, collection_name: str, vector: list, limit: int):
+
         is_collection_existed = await self.is_collection_existed(collection_name=collection_name)
         if not is_collection_existed:
-            self.logger.error(f"Can't insert new records to non-existed collection: {collection_name}")
+            self.logger.error(f"Can not search for records in a non-existed collection: {collection_name}")
             return False
         
-        vector = "[" + ",".join([str(v) for v in vector]) + "]"
+        vector = "[" + ",".join([ str(v) for v in vector ]) + "]"
         async with self.db_client() as session:
             async with session.begin():
-                search_sql = sql_text(f'SELECT {PgVectorTableSchemaEnums.TEXT.value} as text, 1 - ({PgVectorTableSchemaEnums.VECTOR.value} <=> :vector) as score',
-                                        f' FROM {collection_name}'
-                                        ' ORDER BY score DESC '
-                                        f' LIMIT :{limit}')
+                search_sql = sql_text(f'SELECT {PgVectorTableSchemaEnums.TEXT.value} as text, 1 - ({PgVectorTableSchemaEnums.VECTOR.value} <=> :vector) as score'
+                                      f' FROM {collection_name}'
+                                      ' ORDER BY score DESC '
+                                      f'LIMIT {limit}'
+                                      )
                 
                 result = await session.execute(search_sql, {"vector": vector})
 
@@ -283,6 +291,6 @@ class PGVectorProvider(VectorDBInterface):
                     RetrievedDocument(
                         text=record.text,
                         score=record.score
-                    ) 
+                    )
                     for record in records
                 ]

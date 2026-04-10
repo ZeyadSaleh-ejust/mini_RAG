@@ -2,7 +2,8 @@ from abc import ABC, abstractmethod
 from typing import List
 from models.db_schemes import RetrievedDocument
 
-
+# When you mark a method as abstract, you are saying: "I don't know exactly how this will work yet,
+# but I guarantee that any class that uses this template will have a version of this method."
 class VectorDBInterface(ABC):
     @abstractmethod
     def connect(self):
