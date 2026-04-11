@@ -90,6 +90,7 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
     chunk_size = process_request.chunk_size
     overlap_size = process_request.overlap_size
     do_reset = process_request.do_reset
+    chunking_mode = process_request.chunking_mode
 
     project_model = await ProjectModel.create_instance(
         db_client=request.app.db_client
@@ -179,9 +180,10 @@ async def process_endpoint(request: Request, project_id: int, process_request: P
 
         file_chunks = process_controller.process_file_content(
             file_content=file_content,
-            file_id = file_id,
+            file_id=file_id,
             chunk_size=chunk_size,
-            overlap_size=overlap_size
+            overlap_size=overlap_size,
+            chunking_mode=chunking_mode,
         )
         if file_chunks is None or len(file_chunks) == 0:
             return JSONResponse(

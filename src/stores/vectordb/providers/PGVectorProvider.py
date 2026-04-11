@@ -16,13 +16,19 @@ class PGVectorProvider(VectorDBInterface):
         
         self.index_threshold = index_threshold
 
+        # Translate the raw distance method string (from .env) into the
+        # correct pgvector operator class name used in HNSW/IVFFlat index DDL.
         if distance_method == DistanceMethodEnums.COSINE.value:
-            self.distance_method = PgVectorDistanceMethodEnums.COSINE.value
+            self.distance_method = PgVectorDistanceMethodEnums.COSINE.value   # 'vector_cosine_ops'
+        elif distance_method == DistanceMethodEnums.DOT.value:
+            self.distance_method = PgVectorDistanceMethodEnums.DOT.value
+        else:
+            self.distance_method = distance_method  # fallback / unknown
 
         self.pgvector_table_prefix = PgVectorTableSchemaEnums._PREFIX.value
-        self.distance_method = distance_method
-        self.logger = logging.getLogger("uvicorn") # for connecting with FastAPI logger logs
+        self.logger = logging.getLogger("uvicorn")
         self.default_index_name = lambda collection_name: f"{collection_name}_vector_idx"
+
 
 
     async def connect(self):
@@ -165,7 +171,7 @@ class PGVectorProvider(VectorDBInterface):
                     f'CREATE INDEX {index_name} ON {collection_name} '
                     f'USING {index_type} ({PgVectorTableSchemaEnums.VECTOR.value} {self.distance_method})'
                                           )
-
+                print(create_idx_sql)
                 await session.execute(create_idx_sql)
 
                 self.logger.info(f"END: Created vector index for collection: {collection_name}")

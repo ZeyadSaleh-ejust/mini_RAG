@@ -45,7 +45,7 @@ async def startup_span():
 
 @app.on_event("shutdown")
 async def shutdown_span():
-    app.db_engine.dispose()
+    await app.db_engine.dispose()
     await app.vectordb_client.disconnect()
 
 #app.router.lifespan.on_startup.append(startup_db_client)

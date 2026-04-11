@@ -18,3 +18,7 @@ psycopg2==2.9.10
 pgvector==0.4.0
 nltk==3.9.1
 scrapling[fetchers]
+playwright
+requests
+beautifulsoup4
+lxml
