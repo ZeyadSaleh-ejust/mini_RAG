@@ -3,6 +3,8 @@ from models.db_schemes import Project, DataChunk
 from stores.llm.LLMEnums import DocumentTypeEnum
 from typing import List
 import json
+import logging
+
 
 class NLPController(BaseController):
 
@@ -14,6 +16,7 @@ class NLPController(BaseController):
         self.generation_client = generation_client
         self.embedding_client = embedding_client
         self.template_parser = template_parser
+        self.logger = logging.getLogger(__name__)
 
     def create_collection_name(self, project_id: str):
         return f"collection_{self.vectordb_client.default_vector_size}_{project_id}".strip()
@@ -94,21 +97,73 @@ class NLPController(BaseController):
 
         return results
     
-    async def answer_rag_question(self, project: Project, query: str, limit: int = 10):
-        
-        answer, full_prompt, chat_history = None, None, None
+    def rewrite_query(self, query: str, chat_history: list) -> str:
+        """
+        Uses the LLM to reformulate a follow-up question into a fully
+        self-contained standalone question by incorporating the conversation
+        history. Falls back to the original query if history is empty or
+        the rewrite call fails.
+        """
+        if not chat_history:
+            return query
 
-        # step1: retrieve related documents
+        try:
+            # Build a readable chat history string for the prompt
+            history_lines = []
+            for msg in chat_history:
+                role = msg.get("role", "")
+                content = msg.get("content", "")
+                if role == "user":
+                    history_lines.append(f"المستخدم: {content}")
+                elif role == "assistant":
+                    history_lines.append(f"المساعد: {content}")
+
+            history_str = "\n".join(history_lines)
+
+            rewriter_system = self.template_parser.get("rag", "query_rewriter_system_prompt")
+            rewriter_prompt = self.template_parser.get("rag", "query_rewriter_prompt", {
+                "chat_history": history_str,
+                "query": query,
+            })
+
+            rewrite_history = [
+                self.generation_client.construct_prompt(
+                    prompt=rewriter_system,
+                    role=self.generation_client.enums.SYSTEM.value,
+                )
+            ]
+
+            rewritten = self.generation_client.generate_text(
+                prompt=rewriter_prompt,
+                chat_history=rewrite_history,
+            )
+
+            if rewritten and rewritten.strip():
+                return rewritten.strip()
+        except Exception as e:
+            self.logger.warning(f"Query rewriting failed, using original query. Error: {e}")
+
+        return query
+
+    async def answer_rag_question(self, project: Project, query: str,
+                                  limit: int = 10, chat_history: list = []):
+
+        answer, full_prompt, llm_chat_history = None, None, None
+
+        # step1: rewrite query using conversation history
+        standalone_query = self.rewrite_query(query=query, chat_history=chat_history)
+
+        # step2: retrieve related documents using the rewritten standalone query
         retrieved_documents = await self.search_vector_db_collection(
             project=project,
-            text=query,
+            text=standalone_query,
             limit=limit,
         )
 
         if not retrieved_documents or len(retrieved_documents) == 0:
-            return answer, full_prompt, chat_history
-        
-        # step2: Construct LLM prompt
+            return answer, full_prompt, llm_chat_history
+
+        # step3: Construct LLM prompt
         system_prompt = self.template_parser.get("rag", "system_prompt")
 
         documents_prompts = "\n".join([
@@ -119,27 +174,28 @@ class NLPController(BaseController):
             for idx, doc in enumerate(retrieved_documents)
         ])
 
-        footer_prompt = self.template_parser.get("rag", "footer_prompt",{
+        # Use original query in the footer (not the rewritten one) for a natural response
+        footer_prompt = self.template_parser.get("rag", "footer_prompt", {
             "query": query
-            })
+        })
 
-        # step3: Construct Generation Client Prompts
-        chat_history = [
+        # step4: Build generation history: system prompt + prior conversation turns
+        llm_chat_history = [
             self.generation_client.construct_prompt(
                 prompt=system_prompt,
                 role=self.generation_client.enums.SYSTEM.value,
             )
-        ]
+        ] + chat_history
 
-        full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+        full_prompt = "\n\n".join([documents_prompts, footer_prompt])
 
-        # step4: Retrieve the Answer
+        # step5: Retrieve the Answer
         answer = self.generation_client.generate_text(
             prompt=full_prompt,
-            chat_history=chat_history
+            chat_history=llm_chat_history
         )
 
-        return answer, full_prompt, chat_history
+        return answer, full_prompt, llm_chat_history
 
     async def search_vector_db_all_collections(self, text: str, limit: int=10):
         # step1: get collection prefix
@@ -173,20 +229,24 @@ class NLPController(BaseController):
 
         return results
 
-    async def answer_rag_question_global(self, query: str, limit: int = 10):
-        
-        answer, full_prompt, chat_history = None, None, None
+    async def answer_rag_question_global(self, query: str, limit: int = 10,
+                                         chat_history: list = []):
 
-        # step1: retrieve related documents
+        answer, full_prompt, llm_chat_history = None, None, None
+
+        # step1: rewrite query using conversation history
+        standalone_query = self.rewrite_query(query=query, chat_history=chat_history)
+
+        # step2: retrieve related documents using the rewritten standalone query
         retrieved_documents = await self.search_vector_db_all_collections(
-            text=query,
+            text=standalone_query,
             limit=limit,
         )
 
         if not retrieved_documents or len(retrieved_documents) == 0:
-            return answer, full_prompt, chat_history
-        
-        # step2: Construct LLM prompt
+            return answer, full_prompt, llm_chat_history
+
+        # step3: Construct LLM prompt
         system_prompt = self.template_parser.get("rag", "system_prompt")
 
         documents_prompts = "\n".join([
@@ -197,24 +257,25 @@ class NLPController(BaseController):
             for idx, doc in enumerate(retrieved_documents)
         ])
 
-        footer_prompt = self.template_parser.get("rag", "footer_prompt",{
+        # Use original query in the footer for a natural response
+        footer_prompt = self.template_parser.get("rag", "footer_prompt", {
             "query": query
-            })
+        })
 
-        # step3: Construct Generation Client Prompts
-        chat_history = [
+        # step4: Build generation history: system prompt + prior conversation turns
+        llm_chat_history = [
             self.generation_client.construct_prompt(
                 prompt=system_prompt,
                 role=self.generation_client.enums.SYSTEM.value,
             )
-        ]
+        ] + chat_history
 
-        full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+        full_prompt = "\n\n".join([documents_prompts, footer_prompt])
 
-        # step4: Retrieve the Answer
+        # step5: Retrieve the Answer
         answer = self.generation_client.generate_text(
             prompt=full_prompt,
-            chat_history=chat_history
+            chat_history=llm_chat_history
         )
 
-        return answer, full_prompt, chat_history
+        return answer, full_prompt, llm_chat_history
