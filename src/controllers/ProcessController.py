@@ -54,6 +54,13 @@ class ProcessController(BaseController):
                 chunk_size=chunk_size,
                 overlap_size=overlap_size,
             )
+        elif chunking_mode == "article":
+            chunks = self.process_article_splitter(
+                texts=file_content_texts,
+                metadatas=file_content_metadata,
+                chunk_size=chunk_size,
+                overlap_size=overlap_size,
+            )
         else:
             chunks = self.process_simpler_splitter(
                 texts=file_content_texts,
@@ -157,7 +164,99 @@ class ProcessController(BaseController):
                 ))
 
         return chunks
+    
+    def process_article_splitter(self, texts: List[str], metadatas: List[dict], 
+                               chunk_size: int, overlap_size: int = 150):
+        """
+        Parses text structured as IslamWeb articles:
+            Title: <title>
+            Category: <cat>
+            URL: <url>
+            --------------------------------------------------
+            <body content>
+        """
+        # Regex to capture sentence boundaries including Arabic punctuation
+        SENTENCE_SPLIT = re.compile(r'(?<=[.؟!،\n])\s+')
+        
+        full_text = "\n".join(texts)
+        chunks = []
 
+        # 1. Extract Header Metadata and Body
+        # We look for the dashed separator that divides metadata from the content
+        parts = re.split(r'-{30,}', full_text, maxsplit=1)
+        
+        if len(parts) < 2:
+            # Fallback if the file format is missing the separator
+            return [Document(page_content=full_text, metadata={"chunk_type": "simple"})]
+
+        header_part = parts[0].strip()
+        body_part = parts[1].strip()
+
+        # 2. Parse Title and Category specifically for prepending
+        title_match = re.search(r'^Title:\s*(.*)', header_part, re.MULTILINE)
+        cat_match = re.search(r'^Category:\s*(.*)', header_part, re.MULTILINE)
+        
+        title = title_match.group(1).strip() if title_match else "Unknown Title"
+        category = cat_tag = cat_match.group(1).strip() if cat_match else "General"
+        
+        # This is the context string we prepend to every chunk
+        context_prefix = f"الموضوع: {title}\nالتصنيف: {category}\nالنص: "
+
+        # 3. Check if full article fits in one chunk
+        if len(context_prefix + body_part) <= chunk_size:
+            chunks.append(Document(
+                page_content=context_prefix + body_part,
+                metadata={"chunk_type": "article_full", "title": title, "category": category}
+            ))
+            return chunks
+
+        # 4. Split long body into sentences
+        sentences = SENTENCE_SPLIT.split(body_part)
+        sentences = [s for s in sentences if s.strip()]
+
+        current_chunk_body = ""
+        part_index = 1
+
+        for sentence in sentences:
+            # Candidate checks context_prefix + existing text + new sentence
+            candidate = context_prefix + current_chunk_body + sentence
+
+            if len(candidate) > chunk_size and current_chunk_body:
+                # Emit current chunk
+                chunks.append(Document(
+                    page_content=(context_prefix + current_chunk_body).strip(),
+                    metadata={
+                        "chunk_type": "article_part", 
+                        "part": part_index, 
+                        "title": title,
+                        "category": category
+                    }
+                ))
+                part_index += 1
+
+                # Carry over overlap from the end of the current body segment
+                overlap_text = (
+                    current_chunk_body[-overlap_size:] 
+                    if len(current_chunk_body) > overlap_size 
+                    else current_chunk_body
+                )
+                current_chunk_body = overlap_text + sentence + " "
+            else:
+                current_chunk_body += sentence + " "
+
+        # 5. Emit the final remaining piece
+        if current_chunk_body.strip():
+            chunks.append(Document(
+                page_content=(context_prefix + current_chunk_body).strip(),
+                metadata={
+                    "chunk_type": "article_part", 
+                    "part": part_index, 
+                    "title": title,
+                    "category": category
+                }
+            ))
+
+        return chunks
     # ------------------------------------------------------------------
     # Original simple splitter (kept for backward-compat with PDF / generic TXT)
     # ------------------------------------------------------------------
