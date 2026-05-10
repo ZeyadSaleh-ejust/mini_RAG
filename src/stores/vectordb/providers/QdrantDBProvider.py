@@ -138,3 +138,24 @@ class QdrantDBProvider(VectorDBInterface):
             for result in results
         ]
 
+    async def search_all_collections_by_vector(self, prefix: str, vector: list, limit: int=10) -> List[RetrievedDocument]:
+        collections_response = self.client.get_collections()
+        collections = [c.name for c in collections_response.collections if c.name.startswith(prefix)]
+        
+        if not collections:
+            return []
+            
+        all_results = []
+        for collection in collections:
+            results = self.client.search(
+                collection_name=collection,
+                query_vector=vector,
+                limit=limit
+            )
+            if results:
+                all_results.extend([{ "score": r.score, "text": r.payload["text"] } for r in results])
+                
+        # Sort descending by score
+        all_results = sorted(all_results, key=lambda x: x["score"], reverse=True)[:limit]
+        
+        return [RetrievedDocument(**res) for res in all_results]

@@ -300,3 +300,33 @@ class PGVectorProvider(VectorDBInterface):
                     )
                     for record in records
                 ]
+
+    async def search_all_collections_by_vector(self, prefix: str, vector: list, limit: int = 10) -> List[RetrievedDocument]:
+        async with self.db_client() as session:
+            async with session.begin():
+                list_tbl = sql_text("SELECT tablename FROM pg_tables WHERE tablename LIKE :prefix")
+                results = await session.execute(list_tbl, {"prefix": f"{prefix}%"})
+                collections = results.scalars().all()
+                
+                if not collections:
+                    return []
+                
+                vector_str = "[" + ",".join([str(v) for v in vector]) + "]"
+                
+                queries = []
+                for collection in collections:
+                    queries.append(f"SELECT {PgVectorTableSchemaEnums.TEXT.value} AS text, 1 - ({PgVectorTableSchemaEnums.VECTOR.value} <=> :vector) AS score FROM {collection}")
+                
+                union_query = " UNION ALL ".join(queries)
+                final_query = sql_text(f"SELECT text, score FROM ({union_query}) AS combined ORDER BY score DESC LIMIT {limit}")
+                
+                result = await session.execute(final_query, {"vector": vector_str})
+                records = result.fetchall()
+                
+                return [
+                    RetrievedDocument(
+                        text=record.text,
+                        score=record.score
+                    )
+                    for record in records
+                ]

@@ -50,3 +50,7 @@ class VectorDBInterface(ABC):
     @abstractmethod
     def search_by_vector(self, collection_name: str, vector: list, limit: int) -> List[RetrievedDocument]:
         pass
+
+    @abstractmethod
+    def search_all_collections_by_vector(self, prefix: str, vector: list, limit: int) -> List[RetrievedDocument]:
+        pass

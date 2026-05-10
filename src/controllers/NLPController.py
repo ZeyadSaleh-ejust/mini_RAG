@@ -141,3 +141,80 @@ class NLPController(BaseController):
 
         return answer, full_prompt, chat_history
 
+    async def search_vector_db_all_collections(self, text: str, limit: int=10):
+        # step1: get collection prefix
+        prefix = f"collection_{self.vectordb_client.default_vector_size}_"
+
+        # step2: get text embedding vector
+        query_vector = None
+        vectors = self.embedding_client.embed_text(
+            text = text,
+            document_type = DocumentTypeEnum.QUERY.value
+        )
+
+        if not vectors or len(vectors) == 0:
+            return False
+        
+        if isinstance(vectors, list) and len(vectors) > 0:
+            query_vector = vectors[0] # take first vector if multiple are returned
+        
+        if not query_vector:
+            return False
+        
+        # step3: do sematic search across all collections
+        results = await self.vectordb_client.search_all_collections_by_vector(
+            prefix = prefix,
+            vector = query_vector,
+            limit=limit
+        )
+
+        if not results:
+            return False
+
+        return results
+
+    async def answer_rag_question_global(self, query: str, limit: int = 10):
+        
+        answer, full_prompt, chat_history = None, None, None
+
+        # step1: retrieve related documents
+        retrieved_documents = await self.search_vector_db_all_collections(
+            text=query,
+            limit=limit,
+        )
+
+        if not retrieved_documents or len(retrieved_documents) == 0:
+            return answer, full_prompt, chat_history
+        
+        # step2: Construct LLM prompt
+        system_prompt = self.template_parser.get("rag", "system_prompt")
+
+        documents_prompts = "\n".join([
+            self.template_parser.get("rag", "document_prompt", {
+                    "doc_num": idx + 1,
+                    "chunk_text": self.generation_client.process_text(doc.text),
+            })
+            for idx, doc in enumerate(retrieved_documents)
+        ])
+
+        footer_prompt = self.template_parser.get("rag", "footer_prompt",{
+            "query": query
+            })
+
+        # step3: Construct Generation Client Prompts
+        chat_history = [
+            self.generation_client.construct_prompt(
+                prompt=system_prompt,
+                role=self.generation_client.enums.SYSTEM.value,
+            )
+        ]
+
+        full_prompt = "\n\n".join([ documents_prompts,  footer_prompt])
+
+        # step4: Retrieve the Answer
+        answer = self.generation_client.generate_text(
+            prompt=full_prompt,
+            chat_history=chat_history
+        )
+
+        return answer, full_prompt, chat_history
