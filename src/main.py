@@ -6,12 +6,21 @@ from helpers.config import get_settings
 from stores.llm.LLMProviderFactory import LLMProviderFactory
 from stores.vectordb.VectorDBProviderFactory import VectorDBProviderFactory
 from stores.llm.templates.template_parser import TemplateParser
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.on_event("startup")
 async def startup_span():
-    settings = get_settings()
+    settings = get_settings() # getting access for all .env variables
     postgres_conn = f"postgresql+asyncpg://{settings.POSTGRES_USERNAME}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_MAIN_DATABASE}"
     app.db_engine = create_async_engine(url = postgres_conn)
     app.db_client = sessionmaker(
@@ -20,7 +29,7 @@ async def startup_span():
     )
 
     llm_provider_factory = LLMProviderFactory(settings)
-    vectordb_provider_factory = VectorDBProviderFactory(settings)
+    vectordb_provider_factory = VectorDBProviderFactory(config = settings, db_client = app.db_client)
 
     # generation client
     app.generation_client = llm_provider_factory.create(provider=settings.GENERATION_BACKEND)
@@ -35,7 +44,7 @@ async def startup_span():
     app.vectordb_client = vectordb_provider_factory.create(
         provider = settings.VECTOR_DB_BACKEND
         )
-    app.vectordb_client.connect()
+    await app.vectordb_client.connect()
 
     app.template_parser = TemplateParser(
         language=settings.PRIMARY_LANG,
@@ -45,8 +54,8 @@ async def startup_span():
 
 @app.on_event("shutdown")
 async def shutdown_span():
-    app.db_engine.dispose()
-    app.vectordb_client.disconnect()
+    await app.db_engine.dispose()
+    await app.vectordb_client.disconnect()
 
 #app.router.lifespan.on_startup.append(startup_db_client)
 #app.router.lifespan.on_shutdown.append(shutdown_db_client)

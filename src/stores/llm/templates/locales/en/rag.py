@@ -1,6 +1,26 @@
 from string import Template
 #### RAG PROMPTS ####
 
+#### Query Rewriter ####
+query_rewriter_system_prompt = Template("""\
+You are an expert at reformulating questions.
+Your task is to merge the previous conversation context with the user's new question
+and produce a single, standalone, self-contained question that can be searched without any extra context.
+Do NOT answer the question. Only rephrase it as a standalone question.
+If the question is already standalone and needs no context, return it as-is.
+""")
+
+query_rewriter_prompt = Template("\n".join([
+    "## Conversation History:",
+    "$chat_history",
+    "",
+    "## New Question:",
+    "$query",
+    "",
+    "## Standalone Rephrased Question:",
+]))
+
+
 #### System ####
 
 system_prompt = Template("\n".join([
@@ -12,6 +32,7 @@ system_prompt = Template("\n".join([
     "You have to generate response in the same language as the user's query.",
     "Be polite and respectful to the user.",
     "Be precise and concise in your response. Avoid unnecessary information.",
+    "Never reference document numbers or sources in your answer. Give a direct answer without phrases like 'According to document No. ...' or similar.",
 ]))
 
 #### Document ####

@@ -4,7 +4,7 @@ class VectorDBEnums(Enum):
     QDRANT = "QDRANT"
     PGVECTOR = "PGVECTOR"
 
-class DistanceMethodEnums(Enum):
+class DistanceMethodEnums(Enum): # this for QDRANT
     COSINE = "cosine"
     DOT = "dot"
 

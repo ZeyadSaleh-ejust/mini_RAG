@@ -6,4 +6,6 @@ class ProcessRequest(BaseModel):  # as type json
     chunk_size: Optional[int] = 100
     overlap_size: Optional[int] = 20
     do_reset: Optional[int] = 0
-    
+    # "qa"     → Arabic Q&A-aware chunker (default, for fatwa data)
+    # "simple" → original line-based chunker (for generic PDF/TXT)
+    chunking_mode: Optional[str] = "qa"

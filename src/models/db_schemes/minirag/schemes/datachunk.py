@@ -30,7 +30,8 @@ class DataChunk(SQLAlchemyBase):
         Index('ix_chunk_project_id', chunk_project_id),
         Index('ix_chunk_asset_id', chunk_asset_id)
     )
-
+    
+# is a simplified "view" of that data. When your search engine finds a chunk
 class RetrievedDocument(BaseModel):
     text: str
     score: float
