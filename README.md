@@ -34,28 +34,39 @@ export PS1="\[\033[01;32m\]\u@\h:\w\n\[\033[00m\]\$"
 ### Install the required packages
 
 ```bash
-$ pip install -r requirements.txt
+$ pip install -r src/requirements.txt
 ```
 
 ### Setup the environment variables
 
 ```bash
-$ cp .env.example .env
+$ cp src/.env.example src/.env
 ```
 
-set your environment variable in the `.env` file like `OPENAI_API_KEY` value.
+Set your environment variables in the `src/.env` file, such as `OPENAI_API_KEY`.
 
-## Run Docker Compose Services 
+## Run Docker Compose Services
 
 ```bash
 $ cd docker
 $ sudo docker compose up -d
 ```
 
-- update `.env` with our credentials
+Update the environment values if needed for your local setup.
 
-## Run the FastAPI server
+## Run the backend
 
 ```bash
-$ uvicorn main:app  --reload --host 127.0.0.1 --port 8000
+$ cd src
+$ uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
+
+## Run the frontend
+
+```bash
+$ cd frontend
+$ npm install
+$ npm run dev
+```
+
+Then open the app in your browser at `http://localhost:5173` and use the frontend to upload files and chat with the RAG system instead of calling the APIs manually.
